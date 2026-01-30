@@ -1,0 +1,25 @@
+{
+  "name": "neural-network-builder",
+  "version": "1.0.0",
+  "description": "Visual drag-and-drop neural network builder with PyTorch code generation",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": [
+    "neural-network",
+    "blockly",
+    "pytorch",
+    "electron"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  },
+  "dependencies": {
+    "blockly": "^11.0.0"
+  }
+}
+

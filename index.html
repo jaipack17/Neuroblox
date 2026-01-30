@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Builder</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Blockly from CDN for better compatibility -->
+    <script src="https://unpkg.com/blockly@11.0.0/blockly_compressed.js"></script>
+    <script src="https://unpkg.com/blockly@11.0.0/blocks_compressed.js"></script>
+    <script src="https://unpkg.com/blockly@11.0.0/python_compressed.js"></script>
+    <script src="https://unpkg.com/blockly@11.0.0/msg/js/en.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">Neural Network Builder</h1>
+                <div class="header-actions">
+                    <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                    <button id="exportBtn" class="btn btn-primary">Export PyTorch Code</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar - Block Palette -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Input & Layers</h3>
+                    <div class="block-palette" id="layerBlocks">
+                        <div class="palette-block" draggable="true" data-block-type="input">
+                            <span>Input Layer</span>
+                        </div>
+                        <div class="palette-block" draggable="true" data-block-type="dense">
+                            <span>Fully Connected Layer</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Activations</h3>
+                    <div class="block-palette" id="activationBlocks">
+                        <div class="palette-block" draggable="true" data-block-type="relu">
+                            <span>ReLU</span>
+                        </div>
+                        <div class="palette-block" draggable="true" data-block-type="sigmoid">
+                            <span>Sigmoid</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Regularization</h3>
+                    <div class="block-palette" id="regularizationBlocks">
+                        <div class="palette-block" draggable="true" data-block-type="dropout">
+                            <span>Dropout</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Dataset & Training</h3>
+                    <div class="block-palette" id="configBlocks">
+                        <div class="palette-block" draggable="true" data-block-type="dataset">
+                            <span>Dataset</span>
+                        </div>
+                        <div class="palette-block" draggable="true" data-block-type="training_config">
+                            <span>Training Config</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Blockly Workspace -->
+            <main class="workspace-container">
+                <div id="blocklyDiv" class="blockly-workspace"></div>
+            </main>
+
+            <!-- Code Preview Panel -->
+            <aside class="code-panel">
+                <div class="code-panel-header">
+                    <div class="view-toggle">
+                        <button id="pytorchViewBtn" class="view-btn active">PyTorch</button>
+                        <button id="jsonViewBtn" class="view-btn">JSON</button>
+                    </div>
+                    <div class="header-actions-right">
+                        <button id="copyBtn" class="btn btn-small">Copy</button>
+                        <button id="sendBtn" class="btn btn-small btn-primary">Send to Backend</button>
+                    </div>
+                </div>
+                <pre id="codeOutput" class="code-output"><code># Connect blocks to generate code...
+# Drag blocks from the sidebar to the workspace, then connect them together.</code></pre>
+            </aside>
+        </div>
+    </div>
+
+    <script src="custom-blocks.js"></script>
+    <script src="pytorch-generator.js"></script>
+    <script src="json-generator.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
