@@ -41,12 +41,12 @@
     },
     "extraResources": [
       {
-        "from": "./resources/main",
-        "to": "server"
+        "from": "resources/server${exe}", 
+        "to": "server${exe}"
       },
       {
-        "from": "./resources/generator",
-        "to": "generator"
+        "from": "resources/generator${exe}",
+        "to": "generator${exe}"
       }
     ]
   }
