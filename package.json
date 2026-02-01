@@ -1,11 +1,12 @@
 {
-  "name": "neural-network-builder",
+  "name": "neuroblox",
   "version": "1.0.0",
-  "description": "Visual drag-and-drop neural network builder with PyTorch code generation",
+  "description": "Visual drag-and-drop neural network builder with PyTorch code generation. Build, train and test neural networks with sequential blocks",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "dist": "electron-builder"
   },
   "keywords": [
     "neural-network",
@@ -16,10 +17,37 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^26.7.0"
   },
   "dependencies": {
     "blockly": "^11.0.0"
+  },
+  "build": {
+    "productName": "Neuroblox",
+    "files": [
+      "**/*",
+      "!resources/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "identity": null
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "extraResources": [
+      {
+        "from": "./resources/main",
+        "to": "server"
+      },
+      {
+        "from": "./resources/generator",
+        "to": "generator"
+      }
+    ]
   }
 }
-

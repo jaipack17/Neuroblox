@@ -195,13 +195,15 @@
             </aside>
             <main class="inference-right">
                 <div class="inference-section">
-                    <label class="inference-label">Input features</label>
-                    <div id="inferenceInputs" class="inference-inputs"></div>
-                    <button type="button" id="inferenceRunBtn" class="btn btn-primary inference-run-btn" disabled>Run Prediction</button>
+                    <label class="inference-label">Upload CSV for testing</label>
+                    <input id="inferenceCsvInput" type="file" accept=".csv,text/csv" class="inference-file-input">
+                    <button id="inferenceEvalCsvBtn" class="btn btn-primary" disabled>Evaluate Model</button>
+                    <div id="inferenceCsvProgress" class="inference-csv-progress hidden">Processed <span id="inferenceCsvProcessed">0</span> / <span id="inferenceCsvTotal">0</span></div>
+                    <div id="inferenceCsvAccuracy" class="inference-csv-accuracy hidden"><strong>Accuracy:</strong> <span id="inferenceCsvAccuracyVal">—</span></div>
                 </div>
                 <div id="inferenceResult" class="inference-result hidden">
-                    <p class="inference-result-class"><strong>Predicted Class:</strong> <span id="inferencePredClass">—</span></p>
-                    <p class="inference-result-raw"><strong>Raw output:</strong> <span id="inferenceRawOutput">—</span></p>
+                    <p class="inference-result-class"><strong>Predicted Class (sample):</strong> <span id="inferencePredClass">—</span></p>
+                    <p class="inference-result-raw"><strong>Raw output (last):</strong> <span id="inferenceRawOutput">—</span></p>
                 </div>
             </main>
         </div>

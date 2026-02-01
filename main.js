@@ -1,5 +1,42 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
+
+// Store all python processes in an array or object
+let pythonProcesses = [];
+
+function getScriptPath(fileName) {
+  // Helper to get the correct path in Dev vs Prod
+  return app.isPackaged
+    ? path.join(process.resourcesPath, fileName)
+    : path.join(__dirname, 'resources', fileName);
+}
+
+function startPythonProcesses() {
+  const scripts = ['server', 'generator'];
+
+  scripts.forEach((scriptName) => {
+    const scriptPath = getScriptPath(scriptName);
+    console.log(`Starting ${scriptName} from: ${scriptPath}`);
+
+    const proc = spawn(scriptPath);
+
+    // Logging for debugging
+    proc.stdout.on('data', (data) => console.log(`${scriptName}: ${data}`));
+    proc.stderr.on('data', (data) => console.error(`${scriptName} Error: ${data}`));
+    
+    // Add to our list so we can kill it later
+    pythonProcesses.push(proc);
+  });
+}
+
+function stopPythonProcesses() {
+  pythonProcesses.forEach((proc) => {
+    console.log(`Killing process PID: ${proc.pid}`);
+    proc.kill(); // Sends SIGTERM
+  });
+  pythonProcesses = []; // Clear the list
+}
 
 let mainWindow;
 
@@ -43,6 +80,7 @@ ipcMain.handle('dialog:openDatasetFile', async () => {
 });
 
 app.whenReady().then(() => {
+  startPythonProcesses();
   createWindow();
 
   app.on('activate', () => {
@@ -53,6 +91,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  stopPythonProcesses();
+
   if (process.platform !== 'darwin') {
     app.quit();
   }

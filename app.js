@@ -943,11 +943,137 @@ function openInferencePlayground() {
   if (!overlay) return;
   overlay.classList.remove('hidden');
   loadInferenceModels();
-  renderInferenceInputs(INFERENCE_DEFAULT_INPUTS);
   document.getElementById('inferenceMetadata').classList.add('hidden');
   document.getElementById('inferenceResult').classList.add('hidden');
   document.getElementById('inferenceModelSelect').value = '';
-  document.getElementById('inferenceRunBtn').disabled = true;
+  // reset CSV UI
+  // reset CSV UI
+  const csvInput = document.getElementById('inferenceCsvInput');
+  const evalBtn = document.getElementById('inferenceEvalCsvBtn');
+  const progressEl = document.getElementById('inferenceCsvProgress');
+  const accEl = document.getElementById('inferenceCsvAccuracy');
+  if (csvInput) csvInput.value = '';
+  if (evalBtn) evalBtn.disabled = true;
+  if (progressEl) progressEl.classList.add('hidden');
+  if (accEl) accEl.classList.add('hidden');
+}
+
+// Handle CSV evaluation: parse CSV, run predictions and compute accuracy
+function parseCSVText(text) {
+  const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) return [];
+  const rows = lines.map(line => {
+    // split by comma, allow simple quoted values
+    const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+    return parts;
+  });
+  return rows;
+}
+
+async function evaluateCsvForModel(jobId, file) {
+  const progressEl = document.getElementById('inferenceCsvProgress');
+  const processedEl = document.getElementById('inferenceCsvProcessed');
+  const totalEl = document.getElementById('inferenceCsvTotal');
+  const accuracyEl = document.getElementById('inferenceCsvAccuracy');
+  const accuracyValEl = document.getElementById('inferenceCsvAccuracyVal');
+
+  if (!file) return;
+  const text = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+
+  const rows = parseCSVText(text);
+  if (rows.length === 0) {
+    showNotification('CSV file is empty or invalid', 'error');
+    return;
+  }
+
+  // Assume last column is the true label
+  const total = rows.length;
+  let processed = 0;
+  let correct = 0;
+
+  progressEl.classList.remove('hidden');
+  totalEl.textContent = String(total);
+  processedEl.textContent = '0';
+  accuracyEl.classList.remove('hidden');
+  accuracyValEl.textContent = '—';
+
+  for (const row of rows) {
+    // parse features (all except last) as numbers
+    if (row.length < 2) {
+      processed++;
+      processedEl.textContent = String(processed);
+      continue;
+    }
+    const feats = row.slice(0, row.length - 1).map(v => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    });
+    const trueLabelRaw = row[row.length - 1];
+    const trueLabel = parseInt(trueLabelRaw, 10);
+
+    try {
+      const res = await apiPredict(jobId, feats);
+      const pred = res.prediction != null ? res.prediction : (res.class != null ? res.class : null);
+      if (pred != null && !Number.isNaN(trueLabel) && Number(pred) === Number(trueLabel)) {
+        correct++;
+      }
+      // show last prediction in result area
+      const resultEl = document.getElementById('inferenceResult');
+      const predEl = document.getElementById('inferencePredClass');
+      const rawEl = document.getElementById('inferenceRawOutput');
+      if (resultEl && predEl && rawEl) {
+        resultEl.classList.remove('hidden');
+        predEl.textContent = pred != null ? 'Class ' + pred : '—';
+        rawEl.textContent = res.probabilities ? JSON.stringify(res.probabilities) : (res.raw ? JSON.stringify(res.raw) : '—');
+      }
+    } catch (e) {
+      console.error('Predict error for row:', e);
+    }
+
+    processed++;
+    processedEl.textContent = String(processed);
+    // update accuracy progressively
+    const acc = total > 0 ? (correct / processed) * 100 : 0;
+    accuracyValEl.textContent = `${acc.toFixed(1)}%`;
+  }
+
+  // final accuracy
+  const finalAcc = total > 0 ? (correct / total) * 100 : 0;
+  accuracyValEl.textContent = `${finalAcc.toFixed(1)}%`;
+  showNotification(`CSV evaluation complete — Accuracy ${finalAcc.toFixed(1)}%`);
+}
+
+function handleCsvInputChange() {
+  const input = document.getElementById('inferenceCsvInput');
+  const evalBtn = document.getElementById('inferenceEvalCsvBtn');
+  const select = document.getElementById('inferenceModelSelect');
+  if (!input || !evalBtn) return;
+  const hasFile = input.files && input.files.length > 0;
+  evalBtn.disabled = !hasFile || !select.value;
+
+  // If a CSV file is selected, sync its path/name into Dataset blocks
+  if (hasFile) {
+    const file = input.files[0];
+    // In Electron the File object may expose a `path` property; fall back to filename
+    const chosenPath = file.path || file.name || '';
+    if (chosenPath) {
+      window.selectedDatasetPath = chosenPath;
+      // Update sidebar display if present
+      const datasetPathDisplay = document.getElementById('datasetPathDisplay');
+      if (datasetPathDisplay) {
+        datasetPathDisplay.textContent = chosenPath;
+        datasetPathDisplay.setAttribute('data-empty', 'false');
+        datasetPathDisplay.title = chosenPath;
+      }
+      // Sync to all dataset blocks
+      syncSelectedPathToDatasetBlocks(chosenPath);
+    }
+  }
 }
 
 function closeInferencePlayground() {
@@ -1010,17 +1136,22 @@ function renderInferenceInputs(n) {
 function onInferenceModelSelect() {
   const select = document.getElementById('inferenceModelSelect');
   const meta = document.getElementById('inferenceMetadata');
-  const runBtn = document.getElementById('inferenceRunBtn');
   const val = select && select.value;
   if (!val) {
     meta.classList.add('hidden');
-    runBtn.disabled = true;
+    const evalBtn = document.getElementById('inferenceEvalCsvBtn');
+    if (evalBtn) evalBtn.disabled = true;
     return;
   }
   document.getElementById('inferenceJobId').textContent = val;
   document.getElementById('inferenceStatus').textContent = 'Ready';
   meta.classList.remove('hidden');
-  runBtn.disabled = false;
+  // enable CSV evaluation if a CSV is selected
+  const csvInput = document.getElementById('inferenceCsvInput');
+  const evalBtn = document.getElementById('inferenceEvalCsvBtn');
+  if (evalBtn) {
+    evalBtn.disabled = !(csvInput && csvInput.files && csvInput.files.length > 0);
+  }
 }
 
 async function runInference() {
@@ -1121,8 +1252,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if (inferenceBackBtn) inferenceBackBtn.addEventListener('click', closeInferencePlayground);
   const inferenceModelSelect = document.getElementById('inferenceModelSelect');
   if (inferenceModelSelect) inferenceModelSelect.addEventListener('change', onInferenceModelSelect);
-  const inferenceRunBtn = document.getElementById('inferenceRunBtn');
-  if (inferenceRunBtn) inferenceRunBtn.addEventListener('click', runInference);
+  const inferenceCsvInput = document.getElementById('inferenceCsvInput');
+  const inferenceEvalCsvBtn = document.getElementById('inferenceEvalCsvBtn');
+  if (inferenceCsvInput) {
+    inferenceCsvInput.addEventListener('change', handleCsvInputChange);
+  }
+  if (inferenceEvalCsvBtn) {
+    inferenceEvalCsvBtn.addEventListener('click', async () => {
+      const select = document.getElementById('inferenceModelSelect');
+      if (!select || !select.value) {
+        showNotification('Select a trained model first', 'error');
+        return;
+      }
+      const input = document.getElementById('inferenceCsvInput');
+      if (!input || !input.files || input.files.length === 0) {
+        showNotification('Choose a CSV file to evaluate', 'error');
+        return;
+      }
+      const file = input.files[0];
+      inferenceEvalCsvBtn.disabled = true;
+      try {
+        await evaluateCsvForModel(select.value, file);
+      } catch (e) {
+        console.error(e);
+        showNotification('CSV evaluation failed', 'error');
+      } finally {
+        inferenceEvalCsvBtn.disabled = false;
+      }
+    });
+  }
 
   window.addEventListener('resize', () => {
     if (lossHistory.length > 0) drawLossChart();
