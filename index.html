@@ -19,6 +19,7 @@
                 <h1 class="logo">Neural Network Builder</h1>
                 <div class="header-actions">
                     <button id="clearBtn" class="btn btn-secondary">Clear</button>
+                    <button id="inferenceBtn" class="btn btn-secondary">Inference</button>
                     <button id="exportBtn" class="btn btn-primary">Export PyTorch Code</button>
                 </div>
             </div>
@@ -49,6 +50,9 @@
                         <div class="palette-block" draggable="true" data-block-type="sigmoid">
                             <span>Sigmoid</span>
                         </div>
+                        <div class="palette-block" draggable="true" data-block-type="softmax">
+                            <span>Softmax</span>
+                        </div>
                     </div>
                 </div>
 
@@ -63,6 +67,22 @@
 
                 <div class="sidebar-section">
                     <h3 class="sidebar-title">Dataset & Training</h3>
+                    <div class="dataset-file-picker">
+                        <span class="sidebar-title">Dataset file</span>
+                        <button type="button" id="browseDatasetBtn" class="btn btn-small btn-secondary dataset-browse-btn">Browse…</button>
+                        <div id="datasetPathDisplay" class="dataset-path-display" data-empty="true" title="">No file chosen</div>
+                    </div>
+                    <div class="test-split-section">
+                        <span class="sidebar-title">Test/Validation Split</span>
+                        <div class="test-split-bar-wrap">
+                            <div id="testSplitBar" class="test-split-bar">
+                                <span class="test-split-train" style="width: 80%"></span>
+                                <span class="test-split-test" style="width: 20%"></span>
+                            </div>
+                        </div>
+                        <input type="range" id="testSplitSlider" class="test-split-slider" min="0" max="1" step="0.05" value="0.2">
+                        <p id="testSplitLabel" class="test-split-label">80% Training | 20% Testing</p>
+                    </div>
                     <div class="block-palette" id="configBlocks">
                         <div class="palette-block" draggable="true" data-block-type="dataset">
                             <span>Dataset</span>
@@ -85,21 +105,112 @@
                     <div class="view-toggle">
                         <button id="pytorchViewBtn" class="view-btn active">PyTorch</button>
                         <button id="jsonViewBtn" class="view-btn">JSON</button>
+                        <button id="diagramViewBtn" class="view-btn">Diagram</button>
                     </div>
                     <div class="header-actions-right">
                         <button id="copyBtn" class="btn btn-small">Copy</button>
-                        <button id="sendBtn" class="btn btn-small btn-primary">Send to Backend</button>
+                        <button id="trainBtn" class="btn btn-small btn-primary">Train</button>
                     </div>
                 </div>
-                <pre id="codeOutput" class="code-output"><code># Connect blocks to generate code...
+                <div id="codeView" class="code-view">
+                    <pre id="codeOutput" class="code-output"><code># Connect blocks to generate code...
 # Drag blocks from the sidebar to the workspace, then connect them together.</code></pre>
+                </div>
+                <!-- Training Screen (shown when training) -->
+                <div id="trainingView" class="training-view hidden">
+                    <div class="training-header">
+                        <span id="trainingStatusLabel" class="training-status">Idle</span>
+                    </div>
+                    <div class="training-progress-section">
+                        <div class="training-progress-label">
+                            <span>Epoch</span>
+                            <span id="epochProgress">0 / 0</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div class="training-metrics">
+                            <div class="metric">
+                                <span class="metric-label">Progress</span>
+                                <span id="progressPercent">0%</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Loss</span>
+                                <span id="lossValue">—</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">Val. Accuracy</span>
+                                <span id="valAccuracyValue">—</span>
+                            </div>
+                        </div>
+                        <div id="overfittingWarning" class="overfitting-warning hidden">⚠️ Possible Overfitting — training loss down, validation loss up</div>
+                    </div>
+                    <div class="loss-curve-section">
+                        <h4 class="loss-curve-title">Loss (Train vs Validation)</h4>
+                        <canvas id="lossChart" class="loss-chart"></canvas>
+                    </div>
+                    <div id="trainingError" class="training-error hidden"></div>
+                    <div id="trainingDone" class="training-done hidden">
+                        <p class="training-done-msg"></p>
+                        <button id="backToBuilderBtn" class="btn btn-secondary">Back to builder</button>
+                    </div>
+                </div>
             </aside>
+        </div>
+    </div>
+
+    <!-- Full-screen interactive network diagram (new screen) -->
+    <div id="diagramOverlay" class="diagram-overlay hidden">
+        <header class="diagram-overlay-header">
+            <h2 class="diagram-overlay-title">Network diagram</h2>
+            <div class="diagram-overlay-actions">
+                <span class="diagram-overlay-hint">Scroll to zoom · Drag to pan</span>
+                <button type="button" id="diagramBackBtn" class="btn btn-primary">Back to builder</button>
+            </div>
+        </header>
+        <div id="diagramCanvasWrap" class="diagram-canvas-wrap">
+            <canvas id="diagramCanvas"></canvas>
+            <p id="diagramEmptyOverlay" class="diagram-empty-overlay hidden">Connect blocks in the workspace to see the network diagram.</p>
+        </div>
+    </div>
+
+    <!-- Inference Playground (new screen) -->
+    <div id="inferenceOverlay" class="inference-overlay hidden">
+        <header class="inference-overlay-header">
+            <h2 class="inference-overlay-title">Inference Playground</h2>
+            <button type="button" id="inferenceBackBtn" class="btn btn-primary">Back to builder</button>
+        </header>
+        <div class="inference-content">
+            <aside class="inference-left">
+                <div class="inference-section">
+                    <label class="inference-label">Select a trained model</label>
+                    <select id="inferenceModelSelect" class="inference-select">
+                        <option value="">— Load models —</option>
+                    </select>
+                </div>
+                <div id="inferenceMetadata" class="inference-metadata hidden">
+                    <p class="inference-meta-row"><strong>Training Job ID:</strong> <span id="inferenceJobId">—</span></p>
+                    <p class="inference-meta-row"><strong>Status:</strong> <span id="inferenceStatus">—</span></p>
+                </div>
+            </aside>
+            <main class="inference-right">
+                <div class="inference-section">
+                    <label class="inference-label">Input features</label>
+                    <div id="inferenceInputs" class="inference-inputs"></div>
+                    <button type="button" id="inferenceRunBtn" class="btn btn-primary inference-run-btn" disabled>Run Prediction</button>
+                </div>
+                <div id="inferenceResult" class="inference-result hidden">
+                    <p class="inference-result-class"><strong>Predicted Class:</strong> <span id="inferencePredClass">—</span></p>
+                    <p class="inference-result-raw"><strong>Raw output:</strong> <span id="inferenceRawOutput">—</span></p>
+                </div>
+            </main>
         </div>
     </div>
 
     <script src="custom-blocks.js"></script>
     <script src="pytorch-generator.js"></script>
     <script src="json-generator.js"></script>
+    <script src="api.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

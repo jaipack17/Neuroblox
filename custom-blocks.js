@@ -55,6 +55,19 @@ Blockly.Blocks['sigmoid_activation'] = {
   }
 };
 
+// Softmax Block (UI only — backend appends output layer; do not send in blocks)
+Blockly.Blocks['softmax_activation'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField("Softmax");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(80);
+    this.setTooltip("Softmax output layer (added automatically by backend)");
+    this.setHelpUrl("");
+  }
+};
+
 // Cross Entropy Loss Block
 Blockly.Blocks['cross_entropy_loss'] = {
   init: function() {
@@ -91,12 +104,11 @@ Blockly.Blocks['dataset'] = {
         .appendField("Type:")
         .appendField(new Blockly.FieldDropdown([
           ["CSV", "csv"],
-          ["Image", "image"],
-          ["Text", "text"]
+          ["Image", "image"]
         ]), "dataset_type");
     this.appendDummyInput()
         .appendField("Path:")
-        .appendField(new Blockly.FieldTextInput("data_examples/iris.csv"), "path");
+        .appendField(new Blockly.FieldTextInput(""), "path");
     this.appendDummyInput()
         .appendField("Batch Size:")
         .appendField(new Blockly.FieldNumber(16, 1), "batch_size");

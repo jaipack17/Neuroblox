@@ -72,6 +72,9 @@ class JSONGenerator {
       case 'sigmoid_activation':
         this.processSigmoidActivation(block);
         break;
+      case 'softmax_activation':
+        this.processSoftmaxActivation(block);
+        break;
       case 'dropout_layer':
         this.processDropoutLayer(block);
         break;
@@ -95,6 +98,12 @@ class JSONGenerator {
   processSigmoidActivation(block) {
     this.blocks.push({
       type: 'sigmoid'
+    });
+  }
+
+  processSoftmaxActivation(block) {
+    this.blocks.push({
+      type: 'softmax'
     });
   }
 
